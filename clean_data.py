@@ -4,8 +4,11 @@ import os
 from helpers.constants import TEMP_DATA_GENERAL_PATH
 
 class DataCleaning:
-    """ def __init__(self, data):
-        self.data = data """
+    def __init__(
+            self, 
+            df: pd.DataFrame = pd.DataFrame(),
+        ):
+        self.df = df
 
     def dropna(self, df):
         df.dropna(inplace=True)
@@ -43,21 +46,21 @@ class DataCleaning:
         
         return df
 
-    def save(self, df):
-        # Save the cleaned DataFrame to a new Parquet file
+    def load_from_parquet(self, path: str) -> pd.DataFrame:
+        return pq.read_table(path).to_pandas()
 
-        os.makedirs(f'{TEMP_DATA_GENERAL_PATH}', exist_ok=True)
-        df = pd.DataFrame(df, columns=["timestamp", "open", "high", "low", "close", "volume"])
-        df.to_parquet(f'{TEMP_DATA_GENERAL_PATH}/btc_usdt_5m_cleaned.parquet', index=False)
+    def save_to_parquet(self, df: pd.DataFrame, path: str):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        df = df[["timestamp", "open", "high", "low", "close", "volume"]]
+        df.to_parquet(path, index=False)
 
 
     def clean_data(self):
-        table = pq.read_table(f'{TEMP_DATA_GENERAL_PATH}/btc_usdt_5m.parquet')
-        df = table.to_pandas()
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms')
-
+        df = self.df.copy()
         df = self.dropna(df)
         df = self.drop_duplicates(df)
         df = self.handle_outliers(df)
-        self.save(df)
+
+        return df
+        
 

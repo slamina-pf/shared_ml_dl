@@ -7,18 +7,26 @@ import pandas as pd
 import os
 
 class DataCollector:
-    def __init__(self, symbol, timeframe, limit, data_storage_name):
+    def __init__(
+            self, 
+            symbol: str = "BTC/USDT", 
+            timeframe: str = "5m", 
+            days: int = 365,
+            limit: int = 1000, 
+            data_storage_name: str = "btc_usdt_5m",
+        ):
         self.symbol = symbol
         self.timeframe = timeframe
+        self.days = days
         self.limit = limit
         self.data_storage_name = data_storage_name
         self.end_date = datetime.now(timezone.utc)
-        self.start_date = datetime.now(timezone.utc) - timedelta(days=365)
+        self.start_date = datetime.now(timezone.utc) - timedelta(days=self.days)
 
     def to_milliseconds(self, dt):
         return int(dt.timestamp() * 1000)
 
-    def collect_data(self):
+    def get_data_from_binance(self):
 
         since = self.to_milliseconds(self.start_date)
         end_timestamp = self.to_milliseconds(self.end_date)
@@ -40,11 +48,13 @@ class DataCollector:
         
         return all_candles
     
-    def save(self, data):
+    def save_to_parquet(self, df):
         os.makedirs(f'{TEMP_DATA_GENERAL_PATH}', exist_ok=True)
-        df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
         df.to_parquet(f'{TEMP_DATA_GENERAL_PATH}/{self.data_storage_name}.parquet', index=False)
 
-    def save_data(self):
-        data = self.collect_data()
-        self.save(data)
+    def collect_data(self):
+        data = self.get_data_from_binance()
+        df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms')
+
+        return df
